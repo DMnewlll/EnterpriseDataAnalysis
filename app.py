@@ -81,7 +81,7 @@ def upload():
         # 除掉列名中的逗号
         df.rename(columns=lambda col: re.sub(r'[，：.:,（）()]', '', col), inplace=True)
         # 删除2-4行
-        df = df.iloc[:1].append(df.iloc[2:]).reset_index(drop=True)
+        df = pd.concat([df.iloc[:1], df.iloc[2:]]).reset_index(drop=True)
 
         # 保存回一个新的CSV文件
         cleanDataTableName = 'clean_data.csv'
