@@ -25,72 +25,54 @@ def index():
 # 上传文件到HDFS，从HDFS获取文件进行清洗后导入hive数据仓库
 @app.route("/upload", methods=["POST", "GET"])
 def upload():
-    if request.method == 'POST':    # 1.处理上传的文件
-        # 判断请求中是否包含文件
+    if request.method == 'POST':
+        # 文件上传处理
         if 'file' not in request.files:
-            a_json = {"result": "没有文件部分", "status": 400}
-            print(a_json)
-            return json.dumps(a_json, ensure_ascii=False)
+            return render_template('upload.html', error="没有文件部分")
+
         file = request.files['file']
 
-        # 判断有没有选择文件
         if file.filename == '':
-            a_json = {"result": "没有选择文件", "status": 400}
-            print(a_json)
-            return json.dumps(a_json, ensure_ascii=False)
+            return render_template('upload.html', error="没有选择文件")
 
-        # 获取上传的文件的内容
-        file_content = file.read()
-        workbook = load_workbook(io.BytesIO(file_content), data_only=True)
-        # 第一个工作表
-        sheet = workbook.active
-        # 将文件转化为csv文件
-        # 准备CSV文件名（可以根据需要修改）
-        csv_filename = os.path.join('高企源数据.csv')
-        # 写入CSV文件
-        with open(csv_filename, mode='w', newline='', encoding='utf-8') as csv_file:
-            writer = csv.writer(csv_file)
-            header = [cell.value for cell in sheet[1]]  # 第一行作为表头
-            writer.writerow(header)
-            # 写入数据行
-            for row in sheet.iter_rows(min_row=2,values_only=True):
-                writer.writerow(row)
+        try:
+            file_content = file.read()
+            workbook = load_workbook(io.BytesIO(file_content), data_only=True)
+            sheet = workbook.active
 
-        # 3.将源数据上传到HDFS
-        hdfs_path = os.path.join(HDFS_UPLOAD_DIR, file.filename)
-        url = f"{HDFS_NAMENODE_HOST}{hdfs_path}?op=CREATE&user.name={HDFS_USER}&overwrite=true"
-        headers = {'Content-Type': 'application/octet-stream'}
-        response = requests.put(url, data=file_content, headers=headers)
-        if response.status_code == 201:
-            print("上传源数据成功")
-        else:
-            print("上传源数据失败")
+            # CSV转化处理
+            csv_filename = os.path.join('高企源数据.csv')
+            with open(csv_filename, mode='w', newline='', encoding='utf-8') as csv_file:
+                writer = csv.writer(csv_file)
+                header = [cell.value for cell in sheet[1]]
+                writer.writerow(header)
+                for row in sheet.iter_rows(min_row=2, values_only=True):
+                    writer.writerow(row)
 
-        # 4.进行数据清洗
-        df = pd.read_csv(csv_filename)
-        # 删除列名为“数据状态”且其值为“dis”的行
-        df = df[df['数据状态'] != 'dis']
-        # 删除 序号 数据年份 数据状态 撤销原因 申请撤销状态 管理员审核状态 错误数量  是否填写国家统计局一套表
-        columns_to_drop = ['序号', '帐号', '数据年份', '数据状态', '撤消原因', '申请撤消状态', '管理员审核状态', '错误数量',
-                           '警告数量', '数据提交状态', '是否填写国家统计局一套表']
-        df = df.drop(columns=columns_to_drop)
-        # 填充空值
-        df.fillna(-2147483640, inplace=True)
-        # 去掉列名后面的冒号
-        # 除掉列名中的带圈序号
-        # 除掉列名中的逗号
-        df.rename(columns=lambda col: re.sub(r'[，：.:,（）()]', '', col), inplace=True)
-        # 删除2-4行
-        df = df.iloc[:1].append(df.iloc[2:]).reset_index(drop=True)
+            # 上传文件到HDFS
+            hdfs_path = os.path.join(HDFS_UPLOAD_DIR, file.filename)
+            url = f"{HDFS_NAMENODE_HOST}{hdfs_path}?op=CREATE&user.name={HDFS_USER}&overwrite=true"
+            headers = {'Content-Type': 'application/octet-stream'}
+            response = requests.put(url, data=file_content, headers=headers)
+            if response.status_code != 201:
+                raise Exception("上传到HDFS失败")
 
-        # 保存回一个新的CSV文件
-        cleanDataTableName = 'clean_data.csv'
-        df.to_csv(cleanDataTableName, index=False)
+            # 数据清洗
+            df = pd.read_csv(csv_filename)
+            df.fillna(-2147483640, inplace=True)
+            df.rename(columns=lambda col: re.sub(r'[，：.:,（）()]', '', col), inplace=True)
+            #保存一个新的csv文件
+            cleanDataTableName = 'clean_data.csv'
+            df.to_csv(cleanDataTableName, index=False)
 
-        # 4.将清洗后的数据导入到hive
-        # 根据清洗过后的表头在hive建表
-        importHive(cleanDataTableName)
-    return render_template('upload.html', ok='ok')
+            # 导入数据到Hive
+            importHive(cleanDataTableName)
+
+            return render_template('upload.html', ok="上传成功！")
+
+        except Exception as e:
+            return render_template('upload.html', error=f"上传失败: {str(e)}")
+
 
 # 测试可不可根据表头信息自动建表，字段太多了，无法手动建表
 def importHive(tableName):
@@ -155,15 +137,6 @@ def importHive(tableName):
     cursor = conn.cursor()
     cursor.execute(f"LOAD DATA INPATH '{hdfs_path}' INTO TABLE {table_name} ")
     print("2")
-
-
-
-
-
-
-
-
-
 
 
 # 测试上传本地文件到hdfs
