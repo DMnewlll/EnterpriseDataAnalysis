@@ -3,16 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Upload</title>
+    <title>大数据上传</title>
+    <style>
+        /* 页面背景和布局 */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 页面容器 */
+        .container {
+            width: 50%;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 50px;
+        }
+
+        /* 标题 */
+        h1 {
+            text-align: center;
+            color: #007bff; /* 设置标题颜色为蓝色 */
+        }
+
+        /* 上传表单 */
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .upload-form label {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .upload-form input[type="file"] {
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            width: 80%;
+            margin-bottom: 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .upload-form input[type="submit"] {
+            background-color: #007bff; /* 设置上传按钮为蓝色 */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .upload-form input[type="submit"]:hover {
+            background-color: #0056b3; /* 按钮悬停时的颜色 */
+        }
+
+        /* 上传结果提示 */
+        .result {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        /* 响应式布局 */
+        @media (max-width: 768px) {
+            .container {
+                width: 80%;
+            }
+        }
+
+    </style>
 </head>
 <body>
-    <h1>Upload a File</h1>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <label for="fileUpload">上传文件</label>
-        <input type="file" id="fileUpload" name="file">
-        <br><br>
-        <input type="submit" value="Upload File">
-    </form>
-    <h1>上传结果：{{ok}}</h1>
+    <div class="container">
+        <h1>高新技术企业大数据</h1>
+        <form action="/upload" method="POST" enctype="multipart/form-data" class="upload-form">
+            <label for="fileUpload">选择要上传的文件</label>
+            <input type="file" id="fileUpload" name="file" required>
+            <input type="submit" value="上传文件">
+        </form>
+        <!-- 显示上传结果 -->
+        {% if ok %}
+            <div class="result">
+                <p class="success">上传成功！</p>
+            </div>
+        {% elif error %}
+            <div class="result">
+                <p class="error">{{ error }}</p>
+            </div>
+        {% endif %}
+    </div>
 </body>
 </html>
