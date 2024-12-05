@@ -447,6 +447,41 @@ def upload1():
 #     # 4、返回封装后的数据
 #     return json.dumps("a_json", ensure_ascii=False)
 
+#各地高企从业人员分布情况
+@app.route("/get_employment_data", methods=['GET'])
+def get_employment_data():
+    # 连接到Hive
+    cursor, conn = connectHive()
+
+    # 执行查询语句
+    query = """
+    SELECT `行政区划代码`, SUM(`从业人员期末人数`)
+    FROM cleanData
+    GROUP BY `行政区划代码`
+    """
+    cursor.execute(query)
+
+    # 获取查询结果
+    results = cursor.fetchall()
+
+    # 关闭Hive连接
+    closeHive(cursor, conn)
+
+    # 将查询结果转换为pandas DataFrame
+    df = pd.DataFrame(results, columns=['行政区划代码', '从业人员期末人数'])
+
+    # 将行政区划代码转换为地区名称
+    df['地区名称'] = df['行政区划代码'].apply(lambda x: areas1.get(x, '未知'))
+
+    # 删除行政区划代码列
+    df.drop(columns=['行政区划代码'], inplace=True)
+
+    # 将数据转换为JSON格式
+    result_json = df.to_dict(orient='records')
+
+    # 返回JSON格式数据
+    return json.dumps(result_json, ensure_ascii=False)
+
 
 # 连接hive的函数
 def connectHive():
