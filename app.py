@@ -115,6 +115,25 @@ def chanYe():
     return json.dumps(a_json, ensure_ascii=False)
 
 
+# 各地市高企研发总投入分析
+@app.route("/getTotalInvestment")
+def getTotalInvestment():
+    # 需要的数据：行政区划代码、科技活动费总计
+    # 按地市分类，统计该地市所有高企的研发费用
+    # 返回的数据是：地市，研发总投入
+
+    # 1、连接hive
+    cursor, conn = connectHive()
+    # 2、查询数据
+    cursor.execute('select `行政区划代码`,sum(`科技活动费用合计`) as `研发总投入` from cleanData group by `行政区划代码`')
+    results = cursor.fetchall()
+    
+    # 3、将数据封装成json格式
+    # 4、返回封装后的数据
+
+    return 0
+
+
 # 连接hive的函数
 def connectHive():
     conn = connect(host="121.36.46.125", port=10000, user="root", password="Hadoop123456",
