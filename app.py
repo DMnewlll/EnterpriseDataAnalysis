@@ -240,6 +240,8 @@ def get_high_tech_count():
         except:
             pass
 
+#分析各地市高企质量
+
 
 # 分析各地市高企的产业分布情况
 @app.route("/chanYe/<string:area>", methods=["GET"])
