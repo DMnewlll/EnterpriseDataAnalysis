@@ -4,7 +4,7 @@ import os
 import re
 import pandas as pd
 import requests
-from flask import Flask, request, redirect, url_for, render_template, flash
+from flask import Flask, request, redirect, url_for, render_template, flash, jsonify
 from flask import Flask, json
 from impala.dbapi import connect
 from hdfs import InsecureClient
@@ -26,7 +26,8 @@ areas1 = {'4501': '南宁', '4502': '柳州', '4503': '桂林', '4504': '梧州'
           '4514': '崇左'}
 areas = {'南宁': '4501', '柳州': '4502', '桂林': '4503', '梧州': '4504', '北海': '4505', '防城港': '4506',
          '钦州': '4507',
-         '贵港': '4508', '玉林': '4509', '百色': '4510', '贺州': '4511', '河池': '4512', '来宾': '4513', '崇左': '4514'}
+         '贵港': '4508', '玉林': '4509', '百色': '4510', '贺州': '4511', '河池': '4512', '来宾': '4513',
+         '崇左': '4514'}
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -194,6 +195,146 @@ def upload():
         except Exception as e:
             return render_template('upload.html', error=f"上传失败: {str(e)}")
 
+
+# 分析各个地区的高企数量
+@app.route("/high_tech_count", methods=['GET'])
+def get_high_tech_count():
+    """
+    获取各地区高企数量
+    """
+    try:
+        # 1. 连接 Hive
+        cursor, conn = connectHive()
+
+        # 2. 查询数据
+        query = """
+        SELECT `行政区划代码`, COUNT(*)
+        FROM cleanData
+        GROUP BY `行政区划代码`
+        """
+        cursor.execute(query)
+
+        # 3. 处理查询结果
+        result = cursor.fetchall()
+        high_tech_count = {}
+        for row in result:
+            code, count = row
+            region_name = areas1.get(code[:4], "未知地区")  # 使用 areas1 获取地区名称
+            high_tech_count[region_name] = count
+
+        # 返回结果为 JSON 格式
+        return jsonify({
+            "status": "success",
+            "data": high_tech_count
+        })
+
+    except Exception as e:
+        # 处理异常
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        })
+
+    finally:
+        # 关闭连接
+        try:
+            closeHive(cursor, conn)
+        except:
+            pass
+
+#分析各地市高企质量
+
+# 展示预处理结果
+@app.route("/getCleanData", methods=["POST","GET"])
+def getCleanData():
+    # 从POST请求中提取城市值
+    if request.method == 'POST':
+        area = request.form.get('city')
+        # 在这里处理selected_city，比如查询数据库、重定向等
+        print(f'city: {area}')
+
+        # 连接hive
+        cursor, conn = connectHive()
+        if area != 'all':
+            # 根据地区查寻数据
+            sql = 'select * from cleanData where `行政区划代码`=%s'
+            cursor.execute(sql, (areas[area],))
+        else:
+            sql = 'select * from cleanData'
+            cursor.execute(sql)
+        result = []
+        datas = cursor.fetchall()
+        for tuple_item in datas:
+            tableId, account, dataStatus, administrativeRegionCode, industryCode2017, registeredCapital, listingStatus, \
+                listingDate, isListedEntity, marketValue, industryOutputValue, revenue, mainBusinessIncome, \
+                technologyIncome, technologyTransferIncome, technologyContractIncome, technologyConsultingIncome, \
+                commissionedResearchIncome, productSalesIncome, highTechProductIncome, goodsSalesIncome, otherRevenue, \
+                netProfit, employeesEndOfPeriod, returnedStudents, foreignResidents, foreignExperts, newEmployees, graduateStudents, \
+                averageEmployees, postgraduateEmployees, doctorateEmployees, masterEmployees, bachelorEmployees, associateDegreeEmployees, \
+                nonEmployedBeforeHigherEducation, technicians, seniorTechnicians, techniciansLevel2, seniorSkillsLevel3, intermediateSkillsLevel4, \
+                juniorSkillsLevel5, middleManagementPersonnel, professionalTechnicalPersonnel, scienceAndTechnologyPersonnel, \
+                scienceAndTechnologyExpenses, patentApplications = tuple_item
+            dataItem = {
+                'id': tableId,
+                'account': account,
+                'dataStatus': dataStatus,
+                'administrativeRegionCode': administrativeRegionCode,
+                'industryCode2017': industryCode2017,
+                'registeredCapital': registeredCapital,
+                'listingStatus': listingStatus,
+                'listingDate': listingDate,
+                'isListedEntity': isListedEntity,
+                'marketValue': marketValue,
+                'industryOutputValue': industryOutputValue,
+                'revenue': revenue,
+                'mainBusinessIncome': mainBusinessIncome,
+                'technologyIncome': technologyIncome,
+                'technologyTransferIncome': technologyTransferIncome,
+                'technologyContractIncome': technologyContractIncome,
+                'technologyConsultingIncome': technologyConsultingIncome,
+                'commissionedResearchIncome': commissionedResearchIncome,
+                'productSalesIncome': productSalesIncome,
+                'highTechProductIncome': highTechProductIncome,
+                'goodsSalesIncome': goodsSalesIncome,
+                'otherRevenue': otherRevenue,
+                'netProfit': netProfit,
+                'employeesEndOfPeriod': employeesEndOfPeriod,
+                'returnedStudents': returnedStudents,
+                'foreignResidents': foreignResidents,
+                'foreignExperts': foreignExperts,
+                'newEmployees': newEmployees,
+                'graduateStudents': graduateStudents,
+                'averageEmployees': averageEmployees,
+                'postgraduateEmployees': postgraduateEmployees,
+                'doctorateEmployees': doctorateEmployees,
+                'masterEmployees': masterEmployees,
+                'bachelorEmployees': bachelorEmployees,
+                'associateDegreeEmployees': associateDegreeEmployees,
+                'nonEmployedBeforeHigherEducation': nonEmployedBeforeHigherEducation,
+                'technicians': technicians,
+                'seniorTechnicians': seniorTechnicians,
+                'techniciansLevel2': techniciansLevel2,
+                'seniorSkillsLevel3': seniorSkillsLevel3,
+                'intermediateSkillsLevel4': intermediateSkillsLevel4,
+                'juniorSkillsLevel5': juniorSkillsLevel5,
+                'middleManagementPersonnel': middleManagementPersonnel,
+                'professionalTechnicalPersonnel': professionalTechnicalPersonnel,
+                'scienceAndTechnologyPersonnel': scienceAndTechnologyPersonnel,
+                'scienceAndTechnologyExpenses': scienceAndTechnologyExpenses,
+                'patentApplications': patentApplications
+            }
+            result.append(dataItem)
+
+        result = {"result": result, "status": 200}
+        print(datas)
+        closeHive(cursor, conn)
+        data = json.dumps(result, ensure_ascii=False)
+        return render_template("test.html", data=data)
+    else:
+        data = json.dumps("error", ensure_ascii=False)
+        return render_template("test.html", data=data)
+
+
 # 分析各地市高企的产业分布情况
 @app.route("/chanYe/<string:area>", methods=["GET"])
 def chanYe(area):
@@ -266,43 +407,45 @@ def upload1():
     return render_template('demo_1.html')    # 渲染 demo_1.html 页面
 
 
-# 各地市上市企业的比例
-@app.route("/getMarketRate")
-def getMarketRate():
-    # 各地市的上市企业数量与总企业数量的比值
-    # 1.统计各地市上市企业的数量
-    # 连接hive
-    cursor, conn = connectHive()
-    cursor.execute(
-        'select `行政区划代码`,count(*) from cleanData where `上市及新三板、四板挂牌情况`!="00" group by `行政区划代码`')
-    datasOnMarket = cursor.fetchall()
-    print(datasOnMarket)
-    closeHive(cursor, conn)
-    # 2.统计各地市的总企业数量
-    cursor, conn = connectHive()
-    cursor.execute('select `行政区划代码`,count(*) from cleanData group by `行政区划代码`')
-    datasTotal = cursor.fetchall()
-    print(datasTotal)
-    closeHive(cursor, conn)
-    # 3、将数据封装成json格式
-    # results = []
-    # # 使用 for 循环遍历列表中的每个元组
-    # for tuple_item in datas:
-    #     # 解包元组，将元素分别赋值给变量
-    #     area, totalInvestment = tuple_item
-    #     # 创建一个字典来存储元组数据
-    #     dataItem = {
-    #         'area': areas1[area],
-    #         'totalInvestment': totalInvestment
-    #     }
-    #     # 将字典添加到 json_data 列表中
-    #     results.append(dataItem)
-    #
-    #     # 打印每个元组的内容
-    # a_json = {"result": results, "status": 200}
-    # print(datas)
-    # 4、返回封装后的数据
-    return json.dumps("a_json", ensure_ascii=False)
+# # 各地市上市企业的比例
+# @app.route("/getMarketRate")
+# def getMarketRate():
+#     # 各地市的上市企业数量与总企业数量的比值
+#     # 1.统计各地市上市企业的数量
+#     # 连接hive
+#     cursor, conn = connectHive()
+#     cursor.execute(
+#         'select `行政区划代码`,count(*) from cleanData where `上市及新三板、四板挂牌情况`!="0" group by `行政区划代码`')
+#     datasOnMarket = cursor.fetchall()
+#     print(datasOnMarket)
+#     closeHive(cursor, conn)
+#     # 2.统计各地市的总企业数量
+#     cursor, conn = connectHive()
+#     cursor.execute('select `行政区划代码`,count(*) from cleanData group by `行政区划代码`')
+#     datasTotal = cursor.fetchall()
+#     print(datasTotal)
+#     closeHive(cursor, conn)
+#     # 3.创建新的字典{地区，比值}
+#     # 将数据封装成json格式
+#     results = []
+#     # 使用 for 循环遍历列表中的每个元组
+#     for tuple_item1, in datasTotal:
+#         # 解包元组，将元素分别赋值给变量
+#         area, totalNum = tuple_item1
+#         if area in areas1:
+#         # 创建一个字典来存储元组数据
+#         dataItem = {
+#             'area': areas1[area],
+#             'marketRate': totalNum
+#         }
+#         # 将字典添加到 json_data 列表中
+#         results.append(dataItem)
+#
+#         # 打印每个元组的内容
+#     a_json = {"result": results, "status": 200}
+#     print(datas)
+#     # 4、返回封装后的数据
+#     return json.dumps("a_json", ensure_ascii=False)
 
 
 # 连接hive的函数
@@ -432,8 +575,7 @@ def link():
     # cursor.execute('create table test1(id int,name string)')
     # 查询的结果在cursor.fetchall方法中
     # cursor.execute("select * from default.mytest")
-    cursor.execute(
-        'select `行政区划代码`,count(*) from cleanData where `上市及新三板、四板挂牌情况`!="00" group by `行政区划代码`')
+    cursor.execute('select `行政区划代码`,count(*) from cleanData group by `行政区划代码`')
     results = cursor.fetchall()
     a_json = {"result": results, "status": 200}
     print(results)

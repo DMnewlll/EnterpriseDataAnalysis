@@ -3,7 +3,11 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.7 (EnterpriseDataAnalysis)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12" project-jdk-type="Python SDK" />
+<<<<<<< HEAD
+  <component name="ProjectRootManager" version="2" project-jdk-name="my_first_env" project-jdk-type="Python SDK" />
+=======
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.7 (EnterpriseDataAnalysis)" project-jdk-type="Python SDK" />
+>>>>>>> 77c96bf36fa99991438ae7bd35faed88260b6543
   <component name="PyCharmProfessionalAdvertiser">
     <option name="shown" value="true" />
   </component>
