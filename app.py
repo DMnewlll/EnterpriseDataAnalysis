@@ -4,7 +4,7 @@ import os
 import re
 import pandas as pd
 import requests
-from flask import Flask, request, redirect, url_for, render_template, flash
+from flask import Flask, request, redirect, url_for, render_template, flash, jsonify
 from flask import Flask, json
 from impala.dbapi import connect
 from hdfs import InsecureClient
@@ -192,6 +192,54 @@ def upload():
 
         except Exception as e:
             return render_template('upload.html', error=f"上传失败: {str(e)}")
+
+
+# 分析各个地区的高企数量
+@app.route("/high_tech_count", methods=['GET'])
+def get_high_tech_count():
+    """
+    获取各地区高企数量
+    """
+    try:
+        # 1. 连接 Hive
+        cursor, conn = connectHive()
+
+        # 2. 查询数据
+        query = """
+        SELECT `行政区划代码`, COUNT(*)
+        FROM cleanData
+        GROUP BY `行政区划代码`
+        """
+        cursor.execute(query)
+
+        # 3. 处理查询结果
+        result = cursor.fetchall()
+        high_tech_count = {}
+        for row in result:
+            code, count = row
+            region_name = areas1.get(code[:4], "未知地区")  # 使用 areas1 获取地区名称
+            high_tech_count[region_name] = count
+
+        # 返回结果为 JSON 格式
+        return jsonify({
+            "status": "success",
+            "data": high_tech_count
+        })
+
+    except Exception as e:
+        # 处理异常
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        })
+
+    finally:
+        # 关闭连接
+        try:
+            closeHive(cursor, conn)
+        except:
+            pass
+
 
 # 分析各地市高企的产业分布情况
 @app.route("/chanYe/<string:area>", methods=["GET"])
