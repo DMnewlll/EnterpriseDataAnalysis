@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>展示预览结果</title>
+</head>
+<body>
+    <div class="container">
+        <h1>高新技术企业大数据</h1>
+            <form action="/getCleanData" method="post">
+                <select id="city-filter" name="city">
+                    <option value="all">全部</option>
+                    <option value="南宁">南宁</option>
+                    <option value="柳州">柳州</option>
+                    <option value="桂林">桂林</option>
+                    <option value="梧州">梧州</option>
+                    <option value="北海">北海</option>
+                    <option value="防城港">防城港</option>
+                    <option value="钦州">钦州</option>
+                    <option value="贵港">贵港</option>
+                    <option value="玉林">玉林</option>
+                    <option value="百色">百色</option>
+                    <option value="贺州">贺州</option>
+                    <option value="河池">河池</option>
+                    <option value="来宾">来宾</option>
+                    <option value="崇左">崇左</option>
+                </select>
+                <button type="submit">提交</button>
+            </form>
+    </div>
+
+    <h4>{{data}}</h4>
+
+
+</body>
+</html>
