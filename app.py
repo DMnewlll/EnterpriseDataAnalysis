@@ -19,9 +19,13 @@ HDFS_USER = 'root'
 HDFS_UPLOAD_DIR = '/user/data/'
 HIVE_PORT = '10000'
 
-areas = {'4501': '南宁', '4502': '柳州', '4503': '桂林', '4504': '梧州', '4505': '北海', '4506': '防城港',
-         '4507': '钦州', '4508': '贵港', '4509': '玉林', '4510': '百色', '4511': '贺州', '4512': '河池', '4513': '来宾',
-         '4514': '崇左'}
+areas1 = {'4501': '南宁', '4502': '柳州', '4503': '桂林', '4504': '梧州', '4505': '北海', '4506': '防城港',
+          '4507': '钦州', '4508': '贵港', '4509': '玉林', '4510': '百色', '4511': '贺州', '4512': '河池',
+          '4513': '来宾',
+          '4514': '崇左'}
+areas = {'南宁': '4501', '柳州': '4502', '桂林': '4503', '梧州': '4504', '北海': '4505', '防城港': '4506',
+         '钦州': '4507',
+         '贵港': '4508', '玉林': '4509', '百色': '4510', '贺州': '4511', '河池': '4512', '来宾': '4513', '崇左': '4514'}
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -189,17 +193,31 @@ def upload():
 
 
 # 分析各地市高企的产业分布情况
-@app.route("/chanYe")
-def chanYe():
+@app.route("/chanYe/<string:area>", methods=["GET"])
+def chanYe(area):
     # 1需要的数据有：cleanData表里的行政区化代码、行业代码、code表里的产业名
     cursor, conn = connectHive()
-    cursor.execute(
-        'SELECT cd.`行政区划代码`,c.`行业名`,COUNT(*) AS `行业数量` FROM cleanData AS cd JOIN code AS c ON cd.`行业代码2017` = c.`行业代码` group by cd.`行政区划代码`, c.`行业名`')
-    # cursor.execute('select `行业名` from code')
-    results = cursor.fetchall()
-    print(results)
+    sql = 'SELECT c.`行业名`,COUNT(*) AS `行业数量` FROM cleanData AS cd JOIN code AS c ON cd.`行业代码2017` = c.`行业代码` where cd.`行政区划代码`=%s GROUP BY c.`行业名`'
+    cursor.execute(sql, (areas[area],))
+    datas = cursor.fetchall()
+    print(datas)
+    # 使用 for 循环遍历列表中的每个元组
+    results = []
+    # 使用 for 循环遍历列表中的每个元组
+    for tuple_item in datas:
+        # 解包元组，将元素分别赋值给变量
+        chanYeName, totalNum = tuple_item
+        # 创建一个字典来存储元组数据
+        dataItem = {
+            'chanYeName': chanYeName,
+            'totalNum': totalNum
+        }
+        # 将字典添加到 json_data 列表中
+        results.append(dataItem)
+
+        # 打印每个元组的内容
     a_json = {"result": results, "status": 200}
-    print(a_json['result'])
+    print(datas)
     closeHive(cursor, conn)
     return json.dumps(a_json, ensure_ascii=False)
 
@@ -214,14 +232,69 @@ def getTotalInvestment():
     # 1、连接hive
     cursor, conn = connectHive()
     # 2、查询数据
-    cursor.execute(
-        'select `行政区划代码`,sum(`科技活动费用合计`) as `研发总投入` from cleanData group by `行政区划代码`')
-    results = cursor.fetchall()
+    cursor.execute('select `行政区划代码`,sum(`科技活动费用合计`) from cleanData group by `行政区划代码`')
 
+    datas = cursor.fetchall()
+    print(datas)
     # 3、将数据封装成json格式
-    # 4、返回封装后的数据
+    results = []
+    # 使用 for 循环遍历列表中的每个元组
+    for tuple_item in datas:
+        # 解包元组，将元素分别赋值给变量
+        area, totalInvestment = tuple_item
+        # 创建一个字典来存储元组数据
+        dataItem = {
+            'area': areas1[area],
+            'totalInvestment': totalInvestment
+        }
+        # 将字典添加到 json_data 列表中
+        results.append(dataItem)
 
-    return 0
+        # 打印每个元组的内容
+    a_json = {"result": results, "status": 200}
+    print(datas)
+    closeHive(cursor, conn)
+    # 4、返回封装后的数据
+    return json.dumps(a_json, ensure_ascii=False)
+
+
+# 各地市上市企业的比例
+@app.route("/getMarketRate")
+def getMarketRate():
+    # 各地市的上市企业数量与总企业数量的比值
+    # 1.统计各地市上市企业的数量
+    # 连接hive
+    cursor, conn = connectHive()
+    cursor.execute(
+        'select `行政区划代码`,count(*) from cleanData where `上市及新三板、四板挂牌情况`!="00" group by `行政区划代码`')
+    datasOnMarket = cursor.fetchall()
+    print(datasOnMarket)
+    closeHive(cursor, conn)
+    # 2.统计各地市的总企业数量
+    cursor, conn = connectHive()
+    cursor.execute('select `行政区划代码`,count(*) from cleanData group by `行政区划代码`')
+    datasTotal = cursor.fetchall()
+    print(datasTotal)
+    closeHive(cursor, conn)
+    # 3、将数据封装成json格式
+    # results = []
+    # # 使用 for 循环遍历列表中的每个元组
+    # for tuple_item in datas:
+    #     # 解包元组，将元素分别赋值给变量
+    #     area, totalInvestment = tuple_item
+    #     # 创建一个字典来存储元组数据
+    #     dataItem = {
+    #         'area': areas1[area],
+    #         'totalInvestment': totalInvestment
+    #     }
+    #     # 将字典添加到 json_data 列表中
+    #     results.append(dataItem)
+    #
+    #     # 打印每个元组的内容
+    # a_json = {"result": results, "status": 200}
+    # print(datas)
+    # 4、返回封装后的数据
+    return json.dumps("a_json", ensure_ascii=False)
 
 
 # 连接hive的函数
@@ -299,7 +372,6 @@ def importHive(tableName):
     column_types['科技活动人员合计'] = 'INT'
     column_types['当年专利申请数'] = 'INT'
 
-
     print(column_types)
     flat = False
     for (key, value) in column_types.items():
@@ -341,7 +413,6 @@ def importHive(tableName):
     print("2")
 
 
-
 # 测试连接hive
 @app.route("/linkHive")
 def link():
@@ -353,7 +424,8 @@ def link():
     # cursor.execute('create table test1(id int,name string)')
     # 查询的结果在cursor.fetchall方法中
     # cursor.execute("select * from default.mytest")
-    cursor.execute("select * from  cleanData")
+    cursor.execute(
+        'select `行政区划代码`,count(*) from cleanData where `上市及新三板、四板挂牌情况`!="00" group by `行政区划代码`')
     results = cursor.fetchall()
     a_json = {"result": results, "status": 200}
     print(results)
