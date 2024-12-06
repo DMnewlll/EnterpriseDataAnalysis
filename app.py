@@ -4,7 +4,7 @@ import os
 import re
 import pandas as pd
 import requests
-from flask import Flask, request, redirect, url_for, render_template, flash, jsonify
+from flask import Flask, request, redirect, url_for, render_template, flash
 from flask import Flask, json
 from impala.dbapi import connect
 from hdfs import InsecureClient
@@ -205,10 +205,9 @@ def get_high_tech_count():
     """
     获取各地区高企数量
     """
+    # 1. 连接 Hive
+    cursor , conn = connectHive()
     try:
-        # 1. 连接 Hive
-        cursor, conn = connectHive()
-
         # 2. 查询数据
         query = """
         SELECT `行政区划代码`, COUNT(*)
@@ -245,10 +244,11 @@ def get_high_tech_count():
         except:
             pass
 
-#分析各地市高企质量
+
+# 分析各地市高企质量
 
 # 展示预处理结果
-@app.route("/getCleanData", methods=["POST","GET"])
+@app.route("/getCleanData", methods=["POST", "GET"])
 def getCleanData():
     # 从POST请求中提取城市值
     if request.method == 'POST':
@@ -333,9 +333,6 @@ def getCleanData():
         closeHive(cursor, conn)
         data = json.dumps(result, ensure_ascii=False)
         return render_template("test.html", data=data)
-    else:
-        data = json.dumps("error", ensure_ascii=False)
-        return render_template("test.html", data=data)
 
 
 # 分析各地市高企的产业分布情况
@@ -353,7 +350,7 @@ def chanYe(area):
     for tuple_item in datas:
         # 解包元组，将元素分别赋值给变量
         chanYeName, totalNum = tuple_item
-        # 创建一个字典来存储元组数据
+        # 创建一部字典来存储元组数据
         dataItem = {
             'chanYeName': chanYeName,
             'totalNum': totalNum
@@ -388,7 +385,7 @@ def getTotalInvestment():
     for tuple_item in datas:
         # 解包元组，将元素分别赋值给变量
         area, totalInvestment = tuple_item
-        # 创建一个字典来存储元组数据
+        # 创建一部字典来存储元组数据
         dataItem = {
             'area': areas1[area],
             'totalInvestment': totalInvestment
@@ -403,54 +400,116 @@ def getTotalInvestment():
     # 4、返回封装后的数据
     return json.dumps(a_json, ensure_ascii=False)
 
+
 # 渲染可视化页面的接口
 @app.route("/upload1")
 def upload1():
     print("Rendering demo_1.html")  # 调试输出，检查是否进入函数
-    return render_template('demo_1.html')    # 渲染 demo_1.html 页面
+    return render_template('demo_1.html')  # 渲染 demo_1.html 页面
 
 
-# # 各地市上市企业的比例
-# @app.route("/getMarketRate")
-# def getMarketRate():
-#     # 各地市的上市企业数量与总企业数量的比值
-#     # 1.统计各地市上市企业的数量
-#     # 连接hive
-#     cursor, conn = connectHive()
-#     cursor.execute(
-#         'select `行政区划代码`,count(*) from cleanData where `上市及新三板、四板挂牌情况`!="0" group by `行政区划代码`')
-#     datasOnMarket = cursor.fetchall()
-#     print(datasOnMarket)
-#     closeHive(cursor, conn)
-#     # 2.统计各地市的总企业数量
-#     cursor, conn = connectHive()
-#     cursor.execute('select `行政区划代码`,count(*) from cleanData group by `行政区划代码`')
-#     datasTotal = cursor.fetchall()
-#     print(datasTotal)
-#     closeHive(cursor, conn)
-#     # 3.创建新的字典{地区，比值}
-#     # 将数据封装成json格式
-#     results = []
-#     # 使用 for 循环遍历列表中的每个元组
-#     for tuple_item1, in datasTotal:
-#         # 解包元组，将元素分别赋值给变量
-#         area, totalNum = tuple_item1
-#         if area in areas1:
-#         # 创建一个字典来存储元组数据
-#         dataItem = {
-#             'area': areas1[area],
-#             'marketRate': totalNum
-#         }
-#         # 将字典添加到 json_data 列表中
-#         results.append(dataItem)
-#
-#         # 打印每个元组的内容
-#     a_json = {"result": results, "status": 200}
-#     print(datas)
-#     # 4、返回封装后的数据
-#     return json.dumps("a_json", ensure_ascii=False)
+# 各地市上市企业的比例
+@app.route("/getMarketRate")
+def getMarketRate():
+    # 各地市的上市企业数量与总企业数量的比值
+    # 1.统计各地市上市企业的数量
+    # 连接hive
+    cursor, conn = connectHive()
+    cursor.execute(
+        'select `行政区划代码`,count(*) from cleanData where `上市及新三板、四板挂牌情况`!="0" group by `行政区划代码`')
+    datasOnMarket = cursor.fetchall()
+    print(datasOnMarket)
+    closeHive(cursor, conn)
+    # 2.统计各地市的总企业数量
+    cursor, conn = connectHive()
+    cursor.execute('select `行政区划代码`,count(*) from cleanData group by `行政区划代码`')
+    datasTotal = cursor.fetchall()
+    print(datasTotal)
+    closeHive(cursor, conn)
+    # 3.创建新的字典{地区，比值}
+    # 将数据封装成json格式
+    results = []
+    # 使用 for 循环遍历列表中的每个元组
+    for tuple_item1 in datasTotal:
+        # 解包元组，将元素分别赋值给变量
+        area1, totalNum = tuple_item1
+        flat = True
+        for tuple_item2 in datasOnMarket:
+            area2, onMarketNum = tuple_item2
+            if area1 in tuple_item2:
+                # 创建一部字典来存储元组数据
+                dataItem = {
+                    'area': areas1[area1],
+                    'marketRate': onMarketNum / totalNum
+                }
+                flat = False
+                results.append(dataItem)
+                break
+                # 将字典添加到 json_data 列表中
+        if flat:
+            dataItem = {
+                'area': areas1[area1],
+                'marketRate': 0
+            }
+            results.append(dataItem)
+        # 打印每个元组的内容
+    a_json = {"result": results, "status": 200}
+    print(a_json)
+    # print(datas)
+    # 4、返回封装后的数据
+    return json.dumps(a_json, ensure_ascii=False)
 
-#各地高企从业人员分布情况
+
+# 各地市高企的盈亏情况(即各地市净利润为正的高企数量与该地市的总高企数量之比)
+@app.route("/getProfitRate")
+def getProfitRate():
+    # 1.统计各地市净利润为正的高企数量
+    # 连接hive
+    cursor, conn = connectHive()
+    cursor.execute(
+        'select `行政区划代码`,count(*) from cleanData where `净利润`>0 group by `行政区划代码`')
+    positiveProfitNum = cursor.fetchall()
+    print(positiveProfitNum)
+    closeHive(cursor, conn)
+    # 2.统计各地市的总企业数量
+    cursor, conn = connectHive()
+    cursor.execute('select `行政区划代码`,count(*) from cleanData group by `行政区划代码`')
+    TotalNum = cursor.fetchall()
+    print(TotalNum)
+    closeHive(cursor, conn)
+    results = []
+    # 使用 for 循环遍历列表中的每个元组
+    for tuple_item1 in TotalNum:
+        # 解包元组，将元素分别赋值给变量
+        area1, totalNum = tuple_item1
+        flat = True
+        for tuple_item2 in positiveProfitNum:
+            area2, posPNum = tuple_item2
+            if area1 in tuple_item2:
+                # 创建一部字典来存储元组数据
+                dataItem = {
+                    'area': areas1[area1],
+                    'positiveProfit': posPNum / totalNum
+                }
+                flat = False
+                results.append(dataItem)
+                break
+                # 将字典添加到 json_data 列表中
+        if flat:
+            dataItem = {
+                'area': areas1[area1],
+                'positiveProfit': 0
+            }
+            results.append(dataItem)
+        # 打印每个元组的内容
+    a_json = {"result": results, "status": 200}
+    print(a_json)
+    # print(datas)
+    # 4、返回封装后的数据
+    return json.dumps(a_json, ensure_ascii=False)
+
+
+# 各地高企从业人员分布情况
 @app.route("/get_employment_data", methods=['GET'])
 def get_employment_data():
     # 连接到Hive
@@ -685,7 +744,7 @@ def importHive(tableName):
     df = pd.read_csv(tableName)
 
     # 判断数据类型
-    # 初始化一个字典来存储列名和数据类型的映射
+    # 初始化一部字典来存储列名和数据类型的映射
     column_types = {}
     # 遍历每列，推断数据类型
     print(df.columns)
