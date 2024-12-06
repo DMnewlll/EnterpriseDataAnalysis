@@ -9,6 +9,7 @@ from flask import Flask, json
 from impala.dbapi import connect
 from hdfs import InsecureClient
 from openpyxl.reader.excel import load_workbook
+from collections import OrderedDict
 
 app = Flask(__name__)
 
@@ -474,6 +475,81 @@ def get_employment_data():
 
     # 返回JSON格式数据
     return json.dumps(result_json, ensure_ascii=False)
+
+#企业注册资金分析
+# 低注册资金： 注册资金 < 50000 千元
+# 中等注册资金： 50000 千元 <= 注册资金 < 200000 千元
+# 高注册资金： 注册资金 >= 200000 千元
+@app.route("/get_registration_data_by_category", methods=['GET'])
+def get_registration_data_by_category():
+    # 连接到Hive
+    cursor, conn = connectHive()
+
+    # 执行查询语句
+    query = """
+    SELECT 
+        `行政区划代码`,
+        CASE 
+            WHEN `注册资金` < 50000 THEN '低注册资金'
+            WHEN `注册资金` BETWEEN 50000 AND 200000 THEN '中等注册资金'
+            ELSE '高注册资金'
+        END AS `注册资金分类`,
+        COUNT(*) AS `企业数量`
+    FROM cleanData
+    GROUP BY `行政区划代码`, 
+             CASE 
+                 WHEN `注册资金` < 50000 THEN '低注册资金'
+                 WHEN `注册资金` BETWEEN 50000 AND 200000 THEN '中等注册资金'
+                 ELSE '高注册资金'
+             END
+    """
+    cursor.execute(query)
+
+    # 获取查询结果
+    results = cursor.fetchall()
+
+    # 关闭Hive连接
+    closeHive(cursor, conn)
+
+    # 将查询结果转换为pandas DataFrame
+    df = pd.DataFrame(results, columns=['行政区划代码', '注册资金分类', '企业数量'])
+
+    # 将行政区划代码转换为地区名称
+    df['地区名称'] = df['行政区划代码'].apply(lambda x: areas1.get(x, '未知'))
+
+    # 构造输出结果
+    grouped_data = df.pivot_table(
+        index='地区名称',
+        columns='注册资金分类',
+        values='企业数量',
+        aggfunc='sum',
+        fill_value=0
+    ).reset_index()
+
+    # 重命名列名，匹配期望输出
+    grouped_data.rename(
+        columns={
+            '低注册资金': '低注册资金企业数量',
+            '中等注册资金': '中等注册资金企业数量',
+            '高注册资金': '高注册资金企业数量'
+        },
+        inplace=True
+    )
+
+    # 转换为期望的 JSON 格式
+    result_json = []
+    for row in grouped_data.to_dict(orient="records"):
+        result_json.append(OrderedDict([
+            ("地区名称", row["地区名称"]),
+            ("低注册资金企业数量", row.get("低注册资金企业数量", 0)),
+            ("中等注册资金企业数量", row.get("中等注册资金企业数量", 0)),
+            ("高注册资金企业数量", row.get("高注册资金企业数量", 0)),
+        ]))
+
+    # 返回 JSON 响应
+    return json.dumps(result_json, ensure_ascii=False)
+
+
 
 
 # 连接hive的函数
