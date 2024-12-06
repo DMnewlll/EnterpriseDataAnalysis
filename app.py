@@ -449,6 +449,10 @@ def getProfitRate():
     # 4、返回封装后的数据
     return json.dumps(a_json , ensure_ascii=False)
 
+# 企业各项营业收入占比分析
+@app.route("/getInComeProportion")
+def getInComeProportion():
+
 
 # 连接hive的函数
 def connectHive():
