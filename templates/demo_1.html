@@ -1,25 +1,164 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>各地市高企研发总投入分析</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.3/dist/echarts.min.js"></script>
+    <title>企业分析图表展示</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.3.3/echarts.min.js"></script> <!-- 引入 ECharts -->
     <style>
-        /* 图表容器样式 */
-        #chart-container {
+         .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .row {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .chart {
+            flex: 1;
+            margin: 0 10px;
+        }
+        .chart-container {
             width: 100%;
-            height: 600px;
+            padding:10px;
+            height: 400px; /* 设置图表的高度 */
+        }
+        h1{
+           text-align: center;
         }
     </style>
 </head>
 <body>
-
-    <h1>各地市高企研发总投入分析</h1>
-    <div id="chart-container"></div>
+    <div class="container">
+        <h1>企业分析图表展示</h1>
+        <div class="row">
+            <div class="chart">
+                <div class="chart-container" id="chart1"></div> <!-- 插入的图表 -->
+            </div>
+            <div class="chart">
+                <div class="chart-container" id="chart2"></div> <!-- 插入研发总投入的图表 -->
+            </div>
+        </div>
+        <div class="row">
+            <div class="chart">
+                <div class="chart-container" id="chart3"></div>
+            </div>
+            <div class="chart">
+                <div class="chart-container" id="chart4"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="chart">
+                <div class="chart-container" id="chart5"></div>
+            </div>
+            <div class="chart">
+                <div class="chart-container" id="chart6"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="chart">
+                <div class="chart-container" id="chart7"></div>
+            </div>
+            <div class="chart">
+                <div class="chart-container" id="chart8"></div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // 获取数据接口
+        // 获取高企质量数据接口
+        fetch('http://127.0.0.1:5200/enterpriseQuality')  // 这里是您后端提供的数据接口
+            .then(response => response.json())
+            .then(data => {
+                // 初始化 ECharts 图表
+                const chart1 = echarts.init(document.getElementById('chart1')); // 使用 chart1 容器
+
+                // 处理数据：提取地区和对应的质量分数
+                const areas = [];
+                const qualityScores = {
+                    "低": [],
+                    "中": [],
+                    "高": [],
+                    "超高": []
+                };
+
+                // 将数据分类，并按聚类标签分类数据
+                data.forEach(item => {
+                    Object.keys(item).forEach(key => {
+                        if (key !== '聚类标签') {
+                            if (!areas.includes(key)) areas.push(key);
+                            qualityScores[item['聚类标签']].push(item[key]);
+                        }
+                    });
+                });
+
+                // 配置图表的基本选项
+                const option1 = {
+                    title: {
+                        text: '各地区高企质量分析',
+                        subtext: '按聚类标签分组',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: ['低', '中', '高', '超高'],
+                        top: 'bottom'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: areas,
+                        name: '地区'
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '质量评分'
+                    },
+                    series: [
+                        {
+                            name: '低',
+                            type: 'bar',
+                            data: qualityScores['低'],
+                            itemStyle: {
+                                color: '#ff7f50'
+                            }
+                        },
+                        {
+                            name: '中',
+                            type: 'bar',
+                            data: qualityScores['中'],
+                            itemStyle: {
+                                color: '#87cefa'
+                            }
+                        },
+                        {
+                            name: '高',
+                            type: 'bar',
+                            data: qualityScores['高'],
+                            itemStyle: {
+                                color: '#32cd32'
+                            }
+                        },
+                        {
+                            name: '超高',
+                            type: 'bar',
+                            data: qualityScores['超高'],
+                            itemStyle: {
+                                color: '#8a2be2'
+                            }
+                        }
+                    ]
+                };
+
+                // 设置图表的配置项
+                chart1.setOption(option1);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+
+        // 获取各地市高企研发总投入数据接口
         fetch('http://127.0.0.1:5200/getTotalInvestment')
             .then(response => response.json())
             .then(data => {
@@ -28,9 +167,9 @@
                 const investments = data.result.map(item => item.totalInvestment);
 
                 // 初始化 ECharts 图表
-                const chart = echarts.init(document.getElementById('chart-container'));
+                const chart2 = echarts.init(document.getElementById('chart2')); // 使用 chart2 容器
 
-                const option = {
+                const option2 = {
                     title: {
                         text: '各地市高企研发总投入分析',
                         subtext: '单位: 万元',
@@ -61,12 +200,436 @@
                 };
 
                 // 设置图表的配置项
-                chart.setOption(option);
+                chart2.setOption(option2);
             })
             .catch(error => {
                 console.error('Error fetching data:', error);
             });
-    </script>
 
+        fetch('http://127.0.0.1:5200/getMarketRate')  // 这里是您后端提供的数据接口
+            .then(response => response.json())
+            .then(data => {
+                // 初始化 ECharts 图表
+                const chart3 = echarts.init(document.getElementById('chart3'));
+
+                // 处理数据：提取地区和对应的上市企业比例
+                const areas = [];
+                const marketRates = [];
+                data.result.forEach(item => {
+                    areas.push(item.area);
+                    marketRates.push(item.marketRate);
+                });
+
+                // 配置图表的基本选项
+                const option3 = {
+                    title: {
+                        text: '各地市上市企业比例',
+                        subtext: '基于企业上市比率',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c} ({d}%)'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left',
+                        data: areas
+                    },
+                    series: [
+                        {
+                            name: '上市企业比例',
+                            type: 'pie',
+                            radius: '55%',
+                            center: ['50%', '60%'],
+                            data: areas.map((area, index) => ({
+                                name: area,
+                                value: marketRates[index]
+                            })),
+                            emphasis: {
+                                itemStyle: {
+                                    shadowBlur: 10,
+                                    shadowOffsetX: 0,
+                                    shadowOffsetY: 0,
+                                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                }
+                            }
+                        }
+                    ]
+                };
+
+                // 设置图表的配置项
+                chart3.setOption(option3);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+
+        // 获取高企盈亏情况数据接口
+        fetch('http://127.0.0.1:5200/getProfitRate')  // 这里是您后端提供的数据接口
+            .then(response => response.json())
+            .then(data => {
+                // 初始化 ECharts 图表
+                const chart4 = echarts.init(document.getElementById('chart4'));
+
+                // 处理数据：提取地区和对应的盈亏比例
+                const areas = [];
+                const positiveProfits = [];
+                data.result.forEach(item => {
+                    areas.push(item.area);
+                    positiveProfits.push(item.positiveProfit);
+                });
+
+                // 配置图表的基本选项
+                const option4 = {
+                    title: {
+                        text: '各地市高企盈亏情况分析',
+                        subtext: '净利润为正的高企数量占比',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    legend: {
+                        data: ['盈亏比例'],
+                        top: 'bottom'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: areas,
+                        name: '地区'
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '盈亏比例'
+                    },
+                    series: [
+                        {
+                            name: '盈亏比例',
+                            type: 'line',  // 使用曲线图
+                            data: positiveProfits,
+                            smooth: true,  // 平滑曲线
+                            lineStyle: {
+                                color: '#32cd32'  // 绿色曲线，表示盈亏比例
+                            }
+                        }
+                    ]
+                };
+
+                // 设置图表的配置项
+                chart4.setOption(option4);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+
+        fetch('http://127.0.0.1:5200/get_registration_data_by_category')  // 这里是您后端提供的数据接口
+            .then(response => response.json())
+            .then(data => {
+                // 初始化 ECharts 图表
+                const chart5 = echarts.init(document.getElementById('chart5'));
+
+                // 提取数据：地区名称、低注册资金企业数量、中等注册资金企业数量和高注册资金企业数量
+                const areas = [];
+                const lowRegCapital = [];
+                const mediumRegCapital = [];
+                const highRegCapital = [];
+
+                data.forEach(item => {
+                    areas.push(item.地区名称);
+                    lowRegCapital.push(item.低注册资金企业数量);
+                    mediumRegCapital.push(item.中等注册资金企业数量);
+                    highRegCapital.push(item.高注册资金企业数量);
+                });
+
+                // 配置图表的基本选项
+                const option5 = {
+                    title: {
+                        text: '企业注册资金分析',
+                        subtext: '低、中、高注册资金企业数量变化',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'cross',
+                            label: {
+                                backgroundColor: '#6a7985'
+                            }
+                        }
+                    },
+                    legend: {
+                        data: ['低注册资金企业数量', '中等注册资金企业数量', '高注册资金企业数量'],
+                        left: 'left'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: areas,  // X轴为地区名称
+                        axisLabel: {
+                            interval: 0,  // 防止文字重叠
+                            rotate: 45  // 旋转X轴标签
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '企业数量'
+                    },
+                    series: [
+                        {
+                            name: '低注册资金企业数量',
+                            type: 'line',
+                            data: lowRegCapital,
+                            smooth: true,  // 平滑曲线
+                            lineStyle: {
+                                color: '#ff7f50'
+                            }
+                        },
+                        {
+                            name: '中等注册资金企业数量',
+                            type: 'line',
+                            data: mediumRegCapital,
+                            smooth: true,
+                            lineStyle: {
+                                color: '#87cefa'
+                            }
+                        },
+                        {
+                            name: '高注册资金企业数量',
+                            type: 'line',
+                            data: highRegCapital,
+                            smooth: true,
+                            lineStyle: {
+                                color: '#32cd32'
+                            }
+                        }
+                    ]
+                };
+
+                // 设置图表的配置项
+                chart5.setOption(option5);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+
+        fetch('http://127.0.0.1:5200/get_income_data')  // 请求后端数据接口
+            .then(response => response.json())
+            .then(data => {
+                const incomeData = data.data[0];  // 获取返回的第一个地区数据（假设只返回一个地区数据）
+
+                // 准备饼图数据
+                const incomeCategories = [
+                    { name: "主营业务收入", value: parseFloat(incomeData.主营业务收入_占比) },
+                    { name: "产品销售收入", value: parseFloat(incomeData.产品销售收入_占比) },
+                    { name: "其他营业收入", value: parseFloat(incomeData.其他营业收入_占比) },
+                    { name: "技术咨询与服务收入", value: parseFloat(incomeData.技术咨询与服务收入_占比) },
+                    { name: "技术承包收入", value: parseFloat(incomeData.技术承包收入_占比) },
+                    { name: "技术收入", value: parseFloat(incomeData.技术收入_占比) },
+                    { name: "技术转让收入", value: parseFloat(incomeData.技术转让收入_占比) },
+                    { name: "接收委托研究开发收入", value: parseFloat(incomeData.接收委托研究开发收入_占比) }
+                ];
+
+                // 初始化 ECharts 图表
+                const chart6 = echarts.init(document.getElementById('chart6'));
+
+                // 配置饼图选项
+                const option6 = {
+                    title: {
+                        text: '企业各项营业收入占比',
+                        subtext: `地区: ${incomeData.行政区划名称}`,
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{a} <br/>{b}: {c} ({d}%)'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left',
+                        data: incomeCategories.map(item => item.name)
+                    },
+                    series: [
+                        {
+                            name: '营业收入占比',
+                            type: 'pie',
+                            radius: '50%',
+                            center: ['50%', '60%'],
+                            data: incomeCategories,
+                            emphasis: {
+                                itemStyle: {
+                                    shadowBlur: 10,
+                                    shadowOffsetX: 0,
+                                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                }
+                            },
+                            itemStyle: {
+                                borderColor: '#fff',
+                                borderWidth: 1
+                            }
+                        }
+                    ]
+                };
+
+                // 设置饼图数据
+                chart6.setOption(option6);
+            })
+            .catch(error => {
+                console.error('Error fetching income data:', error);
+            });
+
+        fetch('http://127.0.0.1:5200/get_employment_data')  // 这里是您后端提供的数据接口
+            .then(response => response.json())
+            .then(data => {
+                // 初始化 ECharts 图表
+                const chart7 = echarts.init(document.getElementById('chart7'));
+
+                // 处理数据：提取地区和对应的从业人员人数
+                const regions = [];
+                const employmentNumbers = [];
+
+                data.forEach(item => {
+                    regions.push(item["地区名称"]);
+                    employmentNumbers.push(item["从业人员期末人数"]);
+                });
+
+                // 配置图表的基本选项
+                const option7 = {
+                    title: {
+                        text: '各地高企从业人员分布情况',
+                        subtext: '按地区统计',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c} ({d}%)'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left',
+                        data: regions
+                    },
+                    series: [
+                        {
+                            name: '从业人员人数',
+                            type: 'pie',
+                            radius: '55%',
+                            center: ['50%', '60%'],
+                            data: regions.map((region, index) => ({
+                                name: region,
+                                value: employmentNumbers[index]
+                            })),
+                            emphasis: {
+                                itemStyle: {
+                                    shadowBlur: 10,
+                                    shadowOffsetX: 0,
+                                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                }
+                            }
+                        }
+                    ]
+                };
+
+                // 设置图表的配置项
+                chart7.setOption(option7);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+
+        fetch('http://127.0.0.1:5200/high_tech_count')  // 这里是您后端提供的数据接口
+            .then(response => response.json())
+            .then(data => {
+                // 获取从接口返回的地区和高企数量
+                const regionData = data.data;
+
+                // 定义地区名称列表
+                const regions = Object.keys(regionData);
+
+                // 将数据处理为 ECharts 热力图所需要的格式
+                const heatData = regions.map((region, index) => {
+                    return [index, 0, regionData[region]];  // [x, y, value]，x 为地区索引，y 固定为 0（这里展示单列热力图）
+                });
+
+                // 初始化 ECharts 图表
+                const chart8 = echarts.init(document.getElementById('chart8'));
+
+                // 配置图表的基本选项
+                const option8 = {
+                    title: {
+                        text: '各地区高企数量分析',
+                        subtext: '展示各地区高企数量的热力图',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        position: 'top',
+                        formatter: function (params) {
+                            const region = regions[params.data[0]];
+                            const count = params.data[2];
+                            return `${region}: ${count} 高企`;
+                        }
+                    },
+                    visualMap: {
+                        min: Math.min(...Object.values(regionData)),  // 设置热力图的最小值
+                        max: Math.max(...Object.values(regionData)),  // 设置热力图的最大值
+                        calculable: true,
+                        orient: 'horizontal',
+                        left: 'center',
+                        bottom: '20px',
+                        inRange: {
+                            color: ['#f0f8ff', '#ff6347']  // 设置热力图的颜色范围（从淡到深）
+                        }
+                    },
+                    grid: {
+                        left: '10%',
+                        right: '10%',
+                        top: '15%',
+                        bottom: '15%'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: regions,
+                        axisLabel: {
+                            interval: 0,
+                            rotate: 45
+                        },
+                        name: '地区',
+                        nameLocation: 'middle',
+                        nameGap: 30
+                    },
+                    yAxis: {
+                        type: 'value',
+                        show: false  // 隐藏 y 轴，因为这是一个单列热力图
+                    },
+                    series: [{
+                        name: '高企数量',
+                        type: 'heatmap',
+                        data: heatData,  // 热力图数据
+                        label: {
+                            show: true,
+                            color: '#000',
+                            formatter: function (params) {
+                                return params.data[2];  // 显示每个区域的高企数量
+                            }
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                borderColor: '#fff',
+                                borderWidth: 1
+                            }
+                        }
+                    }]
+                };
+
+                // 设置图表的配置项
+                chart8.setOption(option8);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+
+
+
+
+    </script>
 </body>
 </html>
