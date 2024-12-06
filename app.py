@@ -10,6 +10,7 @@ from impala.dbapi import connect
 from hdfs import InsecureClient
 from openpyxl.reader.excel import load_workbook
 from collections import OrderedDict
+from flask_cors import CORS
 
 app = Flask(__name__)
 
@@ -399,6 +400,12 @@ def getTotalInvestment():
     closeHive(cursor, conn)
     # 4、返回封装后的数据
     return json.dumps(a_json, ensure_ascii=False)
+
+# 渲染可视化页面的接口
+@app.route("/upload1")
+def upload1():
+    print("Rendering demo_1.html")  # 调试输出，检查是否进入函数
+    return render_template('demo_1.html')    # 渲染 demo_1.html 页面
 
 
 # # 各地市上市企业的比例
