@@ -14,6 +14,8 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import seaborn as sns
 from flask_cors import CORS
+from decimal import Decimal
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
@@ -666,6 +668,106 @@ def get_registration_data_by_category():
     # 返回 JSON 响应
     return json.dumps(result_json, ensure_ascii=False)
 
+#分析企业各项营业收入的占比
+@app.route('/get_income_data', methods=['GET'])
+def get_income_data():
+    try:
+        # 1. 连接到 Hive 数据库
+        cursor, conn = None, None
+        try:
+            print("Connecting to Hive database...")
+            cursor, conn = connectHive()
+            print("Connected to Hive database.")
+        except Exception as conn_error:
+            print("Database connection failed:", conn_error)
+            raise RuntimeError(f"Database connection failed: {conn_error}")
+
+        # 2. 查询数据
+        try:
+            query = """
+            SELECT
+                `行政区划代码` AS `region_code`,
+                SUM(`营业收入`) AS `总收入`,
+                SUM(`其中主营业务收入`) AS `主营业务收入`,
+                SUM(`其中技术收入`) AS `技术收入`,
+                SUM(`其中技术转让收入`) AS `技术转让收入`,
+                SUM(`技术承包收入`) AS `技术承包收入`,
+                SUM(`技术咨询与服务收入`) AS `技术咨询与服务收入`,
+                SUM(`接受委托研究开发收入`) AS `接收委托研究开发收入`,
+                SUM(`产品销售收入`) AS `产品销售收入`,
+                SUM(`其他营业收入`) AS `其他营业收入`
+            FROM cleanData
+            GROUP BY `行政区划代码`
+            """
+            print("Executing query...")
+            cursor.execute(query)
+            print("Query executed successfully.")
+
+            columns = [desc[0] for desc in cursor.description]
+            print("Columns fetched from query:", columns)
+            rows = cursor.fetchall()
+            print("Rows fetched:", rows)
+
+            data = pd.DataFrame(rows, columns=columns)
+            print("Data loaded into DataFrame.")
+        except Exception as query_error:
+            print("Error during query execution:", query_error)
+            raise RuntimeError(f"Data query failed: {query_error}")
+
+        # 3. 数据处理
+        try:
+            print("Processing data...")
+            income_columns = [
+                "主营业务收入", "技术收入", "技术转让收入", "技术承包收入",
+                "技术咨询与服务收入", "接收委托研究开发收入", "产品销售收入", "其他营业收入"
+            ]
+
+            # 使用 Decimal 进行精确计算
+            for col in income_columns:
+                data[f"{col}_占比"] = data.apply(
+                    lambda row: (Decimal(row[col]) / Decimal(row["总收入"]) * 100)
+                    if row["总收入"] > 0 else 0, axis=1
+                )
+            print("Data processing completed.")
+
+            # 替换行政区代码为中文名称
+            if 'region_code' in data.columns:  # 检查是否存在该列
+                data['行政区划名称'] = data['region_code'].map(areas1).fillna("未知地区")
+            else:
+                raise RuntimeError("数据中未找到列 'region_code'")
+        except Exception as processing_error:
+            print("Error during data processing:", processing_error)
+            raise RuntimeError(f"Data processing failed: {processing_error}")
+
+        # 4. 关闭连接
+        try:
+            closeHive(cursor, conn)
+            print("Hive connection closed.")
+        except Exception as close_error:
+            print("Error closing Hive connection:", close_error)
+
+        # 5. 转换结果为 JSON 并返回
+        print("Converting data to JSON response.")
+        result = data.to_dict(orient="records")
+        return jsonify({
+            "status": "success",
+            "data": result
+        })
+
+    except RuntimeError as e:
+        print("Runtime error occurred:", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+    except Exception as e:
+        print("Unexpected error occurred:", e)
+        return jsonify({
+            "status": "error",
+            "message": "Unexpected error occurred",
+            "details": str(e)
+        }), 500
 
 # 连接hive的函数
 def connectHive():
