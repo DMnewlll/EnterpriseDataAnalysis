@@ -10,6 +10,9 @@ from impala.dbapi import connect
 from hdfs import InsecureClient
 from openpyxl.reader.excel import load_workbook
 from collections import OrderedDict
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+import seaborn as sns
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -204,7 +207,7 @@ def get_high_tech_count():
     获取各地区高企数量
     """
     # 1. 连接 Hive
-    cursor , conn = connectHive()
+    cursor, conn = connectHive()
     try:
         # 2. 查询数据
         query = """
@@ -244,6 +247,53 @@ def get_high_tech_count():
 
 
 # 分析各地市高企质量
+@app.route("/enterpriseQuality")
+def enterpriseQuality():
+    # 获取所有数据使用K-means聚类算法将所有数据分类
+    # 统计这三类里，各个地市的占比,曲线图表示
+    # 需要的数据：科技活动人员、从业人员年平均人数、科技活动费用合计、净利润、当年申请专利数量
+
+    # 1、连接hive
+    cursor, conn = connectHive()
+    # 2、获取所有的数据
+    sql = "select `行政区划代码`,`净利润`,`从业人员年平均人数`,`科技活动费用合计`,`科技活动人员合计`,`当年专利申请数` from cleanData"
+    cursor.execute(sql)
+    datas = cursor.fetchall()
+    closeHive(cursor,conn)
+    # 3、将数据存到一个DataFrame里
+    # 将查询结果转换为pandas DataFrame
+    df = pd.DataFrame(datas,
+                      columns=['行政区划代码', '净利润', '从业人员年平均人数', '科技活动费用合计', '科技活动人员合计','当年专利申请数'])
+    # 将行政区划代码转换为地区名称
+    df['地区名称'] = df['行政区划代码'].apply(lambda x: areas1.get(x, '未知'))
+    # 删除行政区划代码列
+    df.drop(columns=['行政区划代码'], inplace=True)
+    # 增加一列科技活动人员在从业年平均人数的占比
+    df['科技活动人员占比'] = df['科技活动人员合计'] / df['从业人员年平均人数']
+
+    # 4、使用聚类算法进行分类
+    features = df[['净利润', '从业人员年平均人数', '科技活动费用合计', '科技活动人员合计', '当年专利申请数']]
+    # 使用KMeans进行聚类，这里假设我们想要分成3类
+    kmeans = KMeans(n_clusters=4, random_state=42)
+    df['聚类标签'] = kmeans.fit_predict(features)
+
+    # 将聚类标签重新命名为低、中、高、超高
+    label_mapping = {0: '低' , 1: '中' , 2: '高' , 3: '超高'}
+    df['聚类标签'] = df['聚类标签'].map(label_mapping)
+    print(df['聚类标签'])
+    # 将数据转换为JSON格式
+    result_json = df.to_dict(orient='records')
+    # 5、统计每一类中各个地市的占比
+    cluster_stats = df.groupby(['聚类标签' , '地区名称']).size().unstack(fill_value=0)
+    cluster_stats_percent = cluster_stats.div(cluster_stats.sum(axis=1) , axis=0).round(2)
+    # 将DataFrame转换为JSON格式的数据
+    # 注意：这里我们只需要聚类标签和地区名称的占比信息
+    result_json = cluster_stats_percent.reset_index().to_dict(orient='records')
+    print(cluster_stats_percent)
+    # 返回JSON格式数据
+    return json.dumps(result_json, ensure_ascii=False)
+
+
 
 # 展示预处理结果
 @app.route("/getCleanData", methods=["POST", "GET"])
@@ -542,7 +592,8 @@ def get_employment_data():
     # 返回JSON格式数据
     return json.dumps(result_json, ensure_ascii=False)
 
-#企业注册资金分析
+
+# 企业注册资金分析
 # 低注册资金： 注册资金 < 50000 千元
 # 中等注册资金： 50000 千元 <= 注册资金 < 200000 千元
 # 高注册资金： 注册资金 >= 200000 千元
@@ -614,8 +665,6 @@ def get_registration_data_by_category():
 
     # 返回 JSON 响应
     return json.dumps(result_json, ensure_ascii=False)
-
-
 
 
 # 连接hive的函数
