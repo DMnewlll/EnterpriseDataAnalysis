@@ -38,7 +38,7 @@ areas = {'南宁': '4501', '柳州': '4502', '桂林': '4503', '梧州': '4504',
 
 @app.route("/", methods=["POST", "GET"])
 def index():
-    return render_template('upload.html')
+    return render_template('yuchuli.html')
 
 
 # 上传文件到HDFS，从HDFS获取文件进行清洗后导入hive数据仓库
@@ -382,7 +382,7 @@ def getCleanData():
         print(datas)
         closeHive(cursor, conn)
         data = json.dumps(result, ensure_ascii=False)
-        return render_template("test.html", data=data)
+        return jsonify(result)
 
 
 # 分析各地市高企的产业分布情况
