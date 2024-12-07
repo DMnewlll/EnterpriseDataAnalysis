@@ -26,6 +26,7 @@ HDFS_USER = 'root'
 HDFS_UPLOAD_DIR = '/user/data/'
 HIVE_PORT = '10000'
 
+
 areas1 = {'4501': '南宁', '4502': '柳州', '4503': '桂林', '4504': '梧州', '4505': '北海', '4506': '防城港',
           '4507': '钦州', '4508': '贵港', '4509': '玉林', '4510': '百色', '4511': '贺州', '4512': '河池',
           '4513': '来宾',
@@ -36,9 +37,16 @@ areas = {'南宁': '4501', '柳州': '4502', '桂林': '4503', '梧州': '4504',
          '崇左': '4514'}
 
 
+# 主页面路由
 @app.route("/", methods=["POST", "GET"])
 def index():
     return render_template('yuchuli.html')
+
+# 可视化表路由
+@app.route("/upload")
+def upload1():
+    print("Rendering demo_1.html")  # 调试输出，检查是否进入函数
+    return render_template('demo_1.html')  # 渲染 demo_1.html 页面
 
 
 # 上传文件到HDFS，从HDFS获取文件进行清洗后导入hive数据仓库
@@ -202,7 +210,7 @@ def upload():
             return render_template('upload.html', error=f"上传失败: {str(e)}")
 
 
-# 分析各个地区的高企数量
+# 分析各个地区的高企数量:ok
 @app.route("/high_tech_count", methods=['GET'])
 def get_high_tech_count():
     """
@@ -248,7 +256,7 @@ def get_high_tech_count():
             pass
 
 
-# 分析各地市高企质量
+# 分析各地市高企质量：ok
 @app.route("/enterpriseQuality")
 def enterpriseQuality():
     # 获取所有数据使用K-means聚类算法将所有数据分类
@@ -294,7 +302,6 @@ def enterpriseQuality():
     print(cluster_stats_percent)
     # 返回JSON格式数据
     return json.dumps(result_json, ensure_ascii=False)
-
 
 
 # 展示预处理结果
@@ -415,7 +422,7 @@ def chanYe(area):
     return json.dumps(a_json, ensure_ascii=False)
 
 
-# 各地市高企研发总投入分析
+# 各地市高企研发总投入分析:ok
 @app.route("/getTotalInvestment")
 def getTotalInvestment():
     # 需要的数据：行政区划代码、科技活动费总计
@@ -451,14 +458,7 @@ def getTotalInvestment():
     return json.dumps(a_json, ensure_ascii=False)
 
 
-# 渲染可视化页面的接口
-@app.route("/upload1")
-def upload1():
-    print("Rendering demo_1.html")  # 调试输出，检查是否进入函数
-    return render_template('demo_1.html')  # 渲染 demo_1.html 页面
-
-
-# 各地市上市企业的比例
+# 各地市上市企业的比例：饼图 ok
 @app.route("/getMarketRate")
 def getMarketRate():
     # 各地市的上市企业数量与总企业数量的比值
@@ -510,7 +510,7 @@ def getMarketRate():
     return json.dumps(a_json, ensure_ascii=False)
 
 
-# 各地市高企的盈亏情况(即各地市净利润为正的高企数量与该地市的总高企数量之比)
+# 各地市高企的盈亏情况(即各地市净利润为正的高企数量与该地市的总高企数量之比)：曲线图 ok
 @app.route("/getProfitRate")
 def getProfitRate():
     # 1.统计各地市净利润为正的高企数量
@@ -559,7 +559,7 @@ def getProfitRate():
     return json.dumps(a_json, ensure_ascii=False)
 
 
-# 各地高企从业人员分布情况
+# 各地高企从业人员分布情况:饼图:ok
 @app.route("/get_employment_data", methods=['GET'])
 def get_employment_data():
     # 连接到Hive
@@ -668,7 +668,7 @@ def get_registration_data_by_category():
     # 返回 JSON 响应
     return json.dumps(result_json, ensure_ascii=False)
 
-#分析企业各项营业收入的占比
+#分析企业各项营业收入的占比：饼图
 @app.route('/get_income_data', methods=['GET'])
 def get_income_data():
     try:
