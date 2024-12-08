@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广西高新技术企业大数据分析系统</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            padding-top: 50px;
+        }
+        .navbar {
+            margin-bottom: 20px;
+        }
+        .hero {
+            background-color: #007bff;
+            color: white;
+            padding: 50px 0;
+            text-align: center;
+        }
+        .card {
+            margin: 20px;
+        }
+        .footer {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 导航条 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">广西高企分析系统</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('shangchuan') }}">上传文件</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('yuchuli') }}">数据预处理结果</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('upload1') }}">企业分析图表</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主页横幅 -->
+    <div class="hero">
+        <h1>欢迎使用广西高新技术企业大数据分析系统</h1>
+        <p>分析高新技术企业的数据，助力地方经济发展</p>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="{{ url_for('static', filename='images/OIP-C.jpg') }}" class="card-img-top" alt="上传文件">
+                    <div class="card-body">
+                        <h5 class="card-title">上传文件</h5>
+                        <p class="card-text">点击这里上传2018年广西高企数据文件进行分析。</p>
+                        <a href="{{ url_for('shangchuan') }}" class="btn btn-primary">前往</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="{{ url_for('static', filename='images/yuchuli.jpg') }}" class="card-img-top" alt="数据预处理结果">
+                    <div class="card-body">
+                        <h5 class="card-title">数据预处理</h5>
+                        <p class="card-text">查看高企数据的预处理结果信息。</p>
+                        <a href="{{ url_for('yuchuli') }}" class="btn btn-primary">前往</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <img src="{{ url_for('static', filename='images/keshihua.jpg') }}" class="card-img-top" alt="企业分析图表">
+                    <div class="card-body">
+                        <h5 class="card-title">企业分析</h5>
+                        <p class="card-text">查看高企数据分析结果图表。</p>
+                        <a href="{{ url_for('upload1') }}" class="btn btn-primary">前往</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>© 2024 广西高新技术企业大数据分析系统</p>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.4.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

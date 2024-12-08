@@ -40,13 +40,20 @@ areas = {'南宁': '4501', '柳州': '4502', '桂林': '4503', '梧州': '4504',
 # 主页面路由
 @app.route("/", methods=["POST", "GET"])
 def index():
-    return render_template('yuchuli.html')
+    return render_template('main.html')
 
 # 可视化表路由
-@app.route("/upload")
+@app.route("/upload1")
 def upload1():
     print("Rendering demo_1.html")  # 调试输出，检查是否进入函数
     return render_template('demo_1.html')  # 渲染 demo_1.html 页面
+
+
+#显示上传文件页面路由
+@app.route("/shangchuan")
+def shangchuan():
+    print("Rendering upload.html")  # 调试输出，检查是否进入函数
+    return render_template('upload.html')  # 渲染 upload.html 页面
 
 
 # 上传文件到HDFS，从HDFS获取文件进行清洗后导入hive数据仓库
@@ -304,26 +311,32 @@ def enterpriseQuality():
     return json.dumps(result_json, ensure_ascii=False)
 
 
-# 展示预处理结果
+# 预处理结果
+
 @app.route("/getCleanData", methods=["POST", "GET"])
 def getCleanData():
-    # 从POST请求中提取城市值
-    if request.method == 'POST':
-        area = request.form.get('city')
-        # 在这里处理selected_city，比如查询数据库、重定向等
-        print(f'city: {area}')
+    # 对于 GET 请求，使用 query 参数；对于 POST 请求，使用 form 数据
+    area = request.args.get('city') if request.method == 'GET' else request.form.get('city')
 
-        # 连接hive
-        cursor, conn = connectHive()
+    if not area:
+        area = 'all'  # 如果没有提供城市参数，默认获取所有数据
+
+    print(f'city: {area}')
+
+    try:
+        cursor, conn = connectHive()  # 连接到 Hive 数据库
+
         if area != 'all':
-            # 根据地区查寻数据
-            sql = 'select * from cleanData where `行政区划代码`=%s'
+            # 根据地区查找数据
+            sql = 'SELECT * FROM cleanData WHERE `行政区划代码`=%s'
             cursor.execute(sql, (areas[area],))
         else:
-            sql = 'select * from cleanData'
+            sql = 'SELECT * FROM cleanData'
             cursor.execute(sql)
-        result = []
+
         datas = cursor.fetchall()
+        result = []
+
         for tuple_item in datas:
             tableId, account, dataStatus, administrativeRegionCode, industryCode2017, registeredCapital, listingStatus, \
                 listingDate, isListedEntity, marketValue, industryOutputValue, revenue, mainBusinessIncome, \
@@ -382,14 +395,34 @@ def getCleanData():
                 'scienceAndTechnologyPersonnel': scienceAndTechnologyPersonnel,
                 'scienceAndTechnologyExpenses': scienceAndTechnologyExpenses,
                 'patentApplications': patentApplications
+
             }
             result.append(dataItem)
 
+        if not result:
+            return jsonify({"result": [], "status": 204, "message": "No data found."}), 204
         result = {"result": result, "status": 200}
         print(datas)
-        closeHive(cursor, conn)
         data = json.dumps(result, ensure_ascii=False)
+
         return jsonify(result)
+        #return render_template('yuchuli.html',data=result)
+        #return jsonify({"result": result, "status": 200})  # 返回数据
+
+
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return jsonify({"error": str(e), "status": 500}), 500
+
+    finally:
+        if 'cursor' in locals() and 'conn' in locals():
+            closeHive(cursor, conn)
+
+# 展示预处理结果路由
+@app.route("/yuchuli")
+def yuchuli():
+    print("Rendering yuchuli.html")  # 调试输出，检查是否进入函数
+    return render_template('yuchuli.html')  # 渲染 yuchuli.html 页面
 
 
 # 分析各地市高企的产业分布情况
